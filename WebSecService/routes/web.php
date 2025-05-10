@@ -16,7 +16,8 @@ Route::post('users/save/{user}', [UsersController::class, 'save'])->name('users_
 Route::get('users/delete/{user}', [UsersController::class, 'delete'])->name('users_delete');
 Route::get('users/edit_password/{user?}', [UsersController::class, 'editPassword'])->name('edit_password');
 Route::post('users/save_password/{user}', [UsersController::class, 'savePassword'])->name('save_password');
-Route::get('verify', [UsersController::class, 'verify'])->name('verify');
+Route::get('/verify/{token}', [App\Http\Controllers\Web\UsersController::class, 'verify'])
+    ->name('verify');
 Route::get('/auth/google', 
 [UsersController::class, 'redirectToGoogle'])
 ->name('login_with_google');
@@ -69,3 +70,53 @@ Route::get('/test', function () {
 //         ->header('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
 //         ->header('Access-Control-Allow-Headers', 'Content-Type,X-Requested-With');
 // });
+
+Route::get('/email/resend', [App\Http\Controllers\Web\UsersController::class, 'resendVerification'])
+    ->name('resend.verification');
+
+Route::get('/debug/check-email', function(Request $request) {
+    $email = $request->query('email');
+    $user = \App\Models\User::where('email', $email)->first();
+    
+    if ($user) {
+        return response()->json([
+            'found' => true,
+            'user_id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email
+        ]);
+    } else {
+        return response()->json([
+            'found' => false,
+            'email_checked' => $email
+        ]);
+    }
+});
+
+Route::get('/test-queue', function() {
+    dispatch(function() {
+        \Log::info('Queue is working!');
+    });
+    
+    return 'Job dispatched!';
+});
+
+Route::get('/test-email', function () {
+    $name = 'Test User';
+    $email = 'yassin.shaher2005@gmail.com';
+    
+    \Log::info('Sending test email to: ' . $email);
+    
+    try {
+        \Mail::raw('This is a test email from Laravel', function ($message) use ($email, $name) {
+            $message->to($email, $name)
+                    ->subject('Test Email');
+        });
+        
+        \Log::info('Test email sent successfully');
+        return 'Email sent successfully! Check your inbox.';
+    } catch (\Exception $e) {
+        \Log::error('Failed to send test email: ' . $e->getMessage());
+        return 'Failed to send email: ' . $e->getMessage();
+    }
+});

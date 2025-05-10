@@ -40,14 +40,13 @@ class UsersController extends Controller {
 
     	try {
     		$this->validate($request, [
-	        'name' => ['required', 'string', 'min:5'],
+	        'name' => ['required', 'string'],
 	        'email' => ['required', 'email', 'unique:users'],
 	        'password' => ['required'],
 	    	]);
     	}
     	catch(\Exception $e) {
-
-    		return redirect()->back()->withInput($request->input())->withErrors('Invalid registration information.');
+    		return redirect()->back()->withInput($request->only('name', 'email'))->withErrors($e->getMessage());
     	}
 
     	
@@ -60,7 +59,14 @@ class UsersController extends Controller {
         $title = "Verification Link";
         $token = Crypt::encryptString(json_encode(['id' => $user->id, 'email' => $user->email]));
         $link = route("verify", ['token' => $token]);
-        Mail::to($user->email)->send(new VerificationEmail($link, $user->name));
+        try {
+            \Log::info('Attempting to send verification email to: ' . $user->email);
+            Mail::to($user->email)->send(new VerificationEmail($link, $user->name));
+            \Log::info('Successfully sent verification email');
+        } catch (\Exception $e) {
+            \Log::error('Failed to send verification email: ' . $e->getMessage());
+            return redirect('/')->with('message', 'Registration complete. If you did not receive an email, please check your spam folder or contact support.');
+        }
         return redirect('/');
 
     }
@@ -72,14 +78,18 @@ class UsersController extends Controller {
     public function doLogin(Request $request) {
     	
     	if(!Auth::attempt(['email' => $request->email, 'password' => $request->password]))
-            return redirect()->back()->withInput($request->input())->withErrors('Invalid login information.');
+            return redirect()->back()->withInput($request->only('email'))->withErrors('Invalid login information.');
 
         $user = User::where('email', $request->email)->first();
         Auth::setUser($user);
 
-        // if(!$user->email_verified_at)
-        //     return redirect()->back()->withInput($request->input())->withErrors('Your email is not verified.');
-
+        if(!$user->email_verified_at) {
+            Auth::logout();
+            $encodedEmail = rawurlencode($request->email);
+            return redirect()->back()
+                ->withInput(['email' => $request->email])
+                ->withErrors('Your email is not verified. <a href="' . route('resend.verification', ['email' => $encodedEmail]) . '">Click here to resend verification email</a>');
+        }
 
         return redirect('/');
     }
@@ -195,7 +205,7 @@ class UsersController extends Controller {
             abort(401);
         }
 
-        $user->password = bcrypt($request->password); //Secure
+        $user->password = bcrypt($request->password);
         $user->save();
 
         return redirect(route('profile', ['user'=>$user->id]));
@@ -231,8 +241,53 @@ class UsersController extends Controller {
             Auth::login($user);
             return redirect('/');
         } catch (\Exception $e) {
-            return redirect('/login')->with('error', 'Google login failed.'); // Handle errors
+            return redirect('/login')->with('error', 'Google login failed.');
         }
+    }
+
+    public function resendVerification(Request $request) {
+        $email = urldecode($request->query('email'));
+        
+        if (!$email) {
+            return redirect()->route('login')
+                ->withErrors('Email parameter is missing. Please try logging in again.');
+        }
+        
+        \Log::info('Attempting to find user with email: ' . $email);
+        
+        $user = User::where('email', $email)->first();
+        
+        if (!$user) {
+            \Log::info('No user found with email: ' . $email);
+            return redirect()->route('login')
+                ->withErrors('User not found with email: ' . $email)
+                ->withInput(['email' => $email]); 
+        }
+        
+        $token = Crypt::encryptString(json_encode(['id' => $user->id, 'email' => $user->email]));
+        $link = route("verify", ['token' => $token]);
+        
+        try {
+            \Log::info('Attempting to send verification email to: ' . $user->email);
+            Mail::to($user->email)->send(new VerificationEmail($link, $user->name));
+            \Log::info('Successfully sent verification email');
+        } catch (\Exception $e) {
+            \Log::error('Failed to send verification email: ' . $e->getMessage());
+            return redirect('/')->with('message', 'Registration complete. If you did not receive an email, please check your spam folder or contact support.');
+        }
+        
+        return redirect()->route('login')
+            ->with('success', 'Verification email has been resent to ' . $email . '. Please check your inbox.')
+            ->withInput(['email' => $email]);
+    }
+
+    public function someMethod(Request $request) {
+        \Log::info('Starting method execution');
+        
+
+        
+        \Log::info('Method completed');
+        return view('your.view');
     }
 
 } 

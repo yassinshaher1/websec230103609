@@ -18,14 +18,10 @@ Route::get('users/edit_password/{user?}', [UsersController::class, 'editPassword
 Route::post('users/save_password/{user}', [UsersController::class, 'savePassword'])->name('save_password');
 Route::get('/verify/{token}', [App\Http\Controllers\Web\UsersController::class, 'verify'])
     ->name('verify');
-Route::get('/auth/google', 
-[UsersController::class, 'redirectToGoogle'])
-->name('login_with_google');
+Route::get('/login/google', [App\Http\Controllers\Web\UsersController::class, 'redirectToGoogle'])
+    ->name('login_with_google');
 
-Route::get('/auth/google/callback', 
-[UsersController::class, 'handleGoogleCallback']);
-
-
+Route::get('/auth/google/callback', [App\Http\Controllers\Web\UsersController::class, 'handleGoogleCallback']);
 
 Route::get('products', [ProductsController::class, 'list'])->name('products_list');
 Route::get('products/edit/{product?}', [ProductsController::class, 'edit'])->name('products_edit');
@@ -119,4 +115,12 @@ Route::get('/test-email', function () {
         \Log::error('Failed to send test email: ' . $e->getMessage());
         return 'Failed to send email: ' . $e->getMessage();
     }
+});
+
+Route::get('/debug-google', function() {
+    return [
+        'client_id' => config('services.google.client_id'),
+        'client_secret' => '**hidden**',
+        'redirect' => config('services.google.redirect')
+    ];
 });

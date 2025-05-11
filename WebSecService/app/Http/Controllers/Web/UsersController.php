@@ -224,12 +224,25 @@ class UsersController extends Controller {
 
     public function redirectToGoogle()
     {
-        return Socialite::driver('google')->redirect();
+        \Log::info('Google redirect URL: ' . config('services.google.redirect'));
+        
+        return Socialite::driver('google')
+            ->stateless() // Try adding this
+            ->redirectUrl(config('services.google.redirect'))
+            ->redirect();
     }
 
     public function handleGoogleCallback() {
         try {
-            $googleUser = Socialite::driver('google')->user();
+            // Log that we're entering the callback method
+            \Log::info('Entering Google callback method');
+            
+            $googleUser = Socialite::driver('google')
+                ->stateless() // Try adding this
+                ->user();
+            
+            \Log::info('Google login successful: ' . $googleUser->email);
+            
             $user = User::updateOrCreate([
                 'google_id' => $googleUser->id,
             ], [
@@ -238,10 +251,13 @@ class UsersController extends Controller {
                 'google_token' => $googleUser->token,
                 'google_refresh_token' => $googleUser->refreshToken,
             ]);
+            
             Auth::login($user);
             return redirect('/');
         } catch (\Exception $e) {
-            return redirect('/login')->with('error', 'Google login failed.');
+            \Log::error('Google login failed: ' . $e->getMessage());
+            \Log::error('Google login failure trace: ' . $e->getTraceAsString());
+            return redirect('/login')->with('error', 'Google login failed: ' . $e->getMessage());
         }
     }
 

@@ -125,6 +125,11 @@ Route::get('/debug-google', function() {
     ];
 });
 
+Route::get('/products/{product}/toggle-favorite', [ProductsController::class, 'toggleFavorite'])
+    ->name('products_toggle_favorite')
+    ->middleware('auth');
+
+
 Route::get('/cryptography', function (Request $request) {
 
     $data = $request->data??"Welcome to Cryptography";

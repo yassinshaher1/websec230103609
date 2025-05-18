@@ -227,18 +227,17 @@ class UsersController extends Controller {
         \Log::info('Google redirect URL: ' . config('services.google.redirect'));
         
         return Socialite::driver('google')
-            ->stateless() // Try adding this
+            ->stateless()
             ->redirectUrl(config('services.google.redirect'))
             ->redirect();
     }
 
     public function handleGoogleCallback() {
         try {
-            // Log that we're entering the callback method
             \Log::info('Entering Google callback method');
             
             $googleUser = Socialite::driver('google')
-                ->stateless() // Try adding this
+                ->stateless()
                 ->user();
             
             \Log::info('Google login successful: ' . $googleUser->email);

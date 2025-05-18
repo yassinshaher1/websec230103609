@@ -73,4 +73,16 @@ class ProductsController extends Controller {
 
 		return redirect()->route('products_list');
 	}
+
+	public function toggleFavorite(Product $product)
+	{
+		if(!auth()->user()->hasPermissionTo('add_to_favorites')) {
+			abort(401);
+		}
+
+		$product->is_favorite = !$product->is_favorite;
+		$product->save();
+
+		return redirect()->back();
+	}
 } 

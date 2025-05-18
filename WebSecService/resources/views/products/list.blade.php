@@ -68,6 +68,13 @@
 					        <a href="{{route('products_delete', $product->id)}}" class="btn btn-danger form-control">Delete</a>
                             @endcan
 					    </div>
+					    <div class="col col-2">
+                            @can('add_to_favorites')
+					        <a href="{{route('products_toggle_favorite', $product->id)}}" class="btn btn-primary form-control">
+                            {{ $product->is_favorite ? 'Remove from Favorites' : 'Add to Favorites' }}
+                        </a>
+                            @endcan
+					    </div>
 					</div>
 
                     <table class="table table-striped">
